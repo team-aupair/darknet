@@ -642,6 +642,22 @@ image load_image_cv(char *filename, int channels)
     rgbgr_image(out);
     return out;
 }
+/*image load_cv2image_cv(CvMat *img, int channels)
+{
+    IplImage* src = 0;
+    int flag = -1;
+    if (channels == 0) flag = -1;
+    else if (channels == 1) flag = 0;
+    else if (channels == 3) flag = 1;
+    else {
+        fprintf(stderr, "OpenCV can't force load with %d channels\n", channels);
+    }
+
+    image out = ipl_to_image(cvGetImage(img, src));
+    cvReleaseImage(&src);
+    rgbgr_image(out);
+    return out;
+}*/
 
 void flush_stream_buffer(CvCapture *cap, int n)
 {
@@ -1462,6 +1478,21 @@ image load_image_stb(char *filename, int channels)
     free(data);
     return im;
 }
+image load_cv2image_stb(unsigned char *data, int w, int h, int c)
+{
+    int i,j,k;
+    image im = make_image(w, h, c);
+    for(k = 0; k < c; ++k){
+        for(j = 0; j < h; ++j){
+            for(i = 0; i < w; ++i){
+                int dst_index = i + w*j + w*h*k;
+                int src_index = k + c*i + c*w*j;
+                im.data[dst_index] = (float)data[src_index]/255.;
+            }
+        }
+    }
+    return im;
+}
 
 image load_image(char *filename, int w, int h, int c)
 {
@@ -1478,10 +1509,26 @@ image load_image(char *filename, int w, int h, int c)
     }
     return out;
 }
+image load_cv2image(unsigned char *img, int w, int h, int c)
+{
+	//CvMat im = cvMat(h, w, CV_8UC3, img);
+    image out = load_cv2image_stb(img, w, h, c);
+
+    if((h && w) && (h != out.h || w != out.w)){
+        image resized = resize_image(out, w, h);
+        free_image(out);
+        out = resized;
+    }
+    return out;
+}
 
 image load_image_color(char *filename, int w, int h)
 {
     return load_image(filename, w, h, 3);
+}
+image load_cv2image_color(unsigned char *img, int w, int h)
+{
+    return load_cv2image(img, w, h, 3);
 }
 
 image get_image_layer(image m, int l)

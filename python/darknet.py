@@ -1,6 +1,7 @@
 from ctypes import *
 import math
 import random
+import numpy as np
 
 def sample(probs):
     s = sum(probs)
@@ -107,6 +108,10 @@ load_image = lib.load_image_color
 load_image.argtypes = [c_char_p, c_int, c_int]
 load_image.restype = IMAGE
 
+load_image_ = lib.load_cv2image_color
+load_image_.argtypes = [POINTER(c_ubyte), c_int, c_int]
+load_image_.restype = IMAGE
+
 rgbgr_image = lib.rgbgr_image
 rgbgr_image.argtypes = [IMAGE]
 
@@ -123,7 +128,11 @@ def classify(net, meta, im):
     return res
 
 def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
-    im = load_image(image, 0, 0)
+    if isinstance(image, str):
+        im = load_image(image, 0, 0)
+    else:
+        img = image.reshape([-1]).tolist()
+        im = load_image_(c_array(c_ubyte, img), image.shape[1], image.shape[0])
     num = c_int(0)
     pnum = pointer(num)
     predict_image(net, im)
